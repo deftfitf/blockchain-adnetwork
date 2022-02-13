@@ -13,6 +13,7 @@ library AdNetworkSet {
         address payable owner;
         string name;
         string uri;
+        string publicKey;
         uint256 floorPrice;
     }
 
@@ -65,8 +66,10 @@ library AdNetworkSet {
 
     struct Ad {
         uint256 adId;
+        uint256 inventoryId;
         address payable owner;
         bytes32 hash;
+        bytes32 hashForDelivery;
         uint32 start;
         uint32 end;
         uint256 price;

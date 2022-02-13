@@ -2,6 +2,8 @@ plugins {
     id 'org.springframework.boot' version '2.6.3'
     id 'io.spring.dependency-management' version '1.0.11.RELEASE'
     id 'java'
+    id 'project-report'
+    id "org.web3j" version "4.8.7"
 }
 
 group = 'jp.deftfitf'
@@ -18,15 +20,46 @@ repositories {
     mavenCentral()
 }
 
+dependencyManagement {
+    def okhttpVersion = '4.3.1'
+    dependencies {
+        dependency "com.squareup.okhttp3:okhttp:$okhttpVersion"
+        dependency "com.squareup.okhttp3:logging-interceptor:$okhttpVersion"
+    }
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-freemarker'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    implementation 'org.web3j:core:5.0.0'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    implementation 'org.springframework.security:spring-security-test'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+solidity {
+    optimizeRuns = 500
+}
+
+web3j {
+    includedContracts = ['AdNetwork']
+}
+
+sourceSets {
+    main {
+        solidity {
+            srcDir {
+                "adnetwork-contracts/contracts"
+            }
+        }
+    }
 }

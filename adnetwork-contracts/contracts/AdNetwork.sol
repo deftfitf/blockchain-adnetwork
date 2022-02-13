@@ -26,13 +26,13 @@ contract AdNetwork {
     Counters.Counter private _adIds;
     AdNetworkSet.AdSet private _ads;
 
-    mapping (uint256 => uint256) private _requestApproval;
-    mapping (uint256 => uint256) private _adToInventory;
-    mapping (uint256 => uint256) private _waitAdToInventory;
-    mapping (address => uint32) private _ownerAdCount;
-    mapping (address => uint32) private _ownerInventoryCount;
-    mapping (uint256 => uint32) private _inventoryAdCount;
-    mapping (uint256 => uint32) private _inventoryWaitAdCount;
+    mapping(uint256 => uint256) private _requestApproval;
+    mapping(uint256 => uint256) private _adToInventory;
+    mapping(uint256 => uint256) private _waitAdToInventory;
+    mapping(address => uint32) private _ownerAdCount;
+    mapping(address => uint32) private _ownerInventoryCount;
+    mapping(uint256 => uint32) private _inventoryAdCount;
+    mapping(uint256 => uint32) private _inventoryWaitAdCount;
 
     event AdReviewRequestSent(uint256 indexed inventoryId, bytes32 requestHash, bytes32 adHash);
     event AdCreated(uint256 indexed inventoryId, uint256 adId);
@@ -43,14 +43,14 @@ contract AdNetwork {
     constructor() {
     }
 
-    function createAdInventory(string memory name, string memory uri, uint256 floorPrice) external returns (uint256) {
+    function createAdInventory(string memory name, string memory uri, string memory publicKey, uint256 floorPrice) external returns (uint256) {
         require(
             _ownerInventoryCount[msg.sender] < MAX_CREATABLE_INVENTORY_COUNT,
             "You have reached the maximum number of inventory you can create. You need to remove unwanted inventory.");
         _inventoryIds.increment();
         uint256 inventoryId = _inventoryIds.current();
 
-        AdNetworkSet.Inventory memory inventory = AdNetworkSet.Inventory(inventoryId, payable(msg.sender), name, uri, floorPrice);
+        AdNetworkSet.Inventory memory inventory = AdNetworkSet.Inventory(inventoryId, payable(msg.sender), name, uri, publicKey, floorPrice);
         _inventories.add(inventoryId, inventory);
         emit InventoryCreated(inventoryId);
 
@@ -70,7 +70,7 @@ contract AdNetwork {
         _inventories.remove(_inventoryId);
     }
 
-    function createAd(uint256 _inventoryId, bytes32 _hash, uint32 _start, uint32 _end) external payable returns (uint256) {
+    function createAd(uint256 _inventoryId, bytes32 _hash, bytes32 _hashForDelivery, uint32 _start, uint32 _end) external payable returns (uint256) {
         require(
             _ownerAdCount[msg.sender] < MAX_CREATABLE_AD_COUNT,
             "You have reached the maximum number of ads you can create. You need to remove unwanted ads.");
@@ -95,7 +95,7 @@ contract AdNetwork {
         _adIds.increment();
         uint256 adId = _adIds.current();
 
-        AdNetworkSet.Ad memory ad = AdNetworkSet.Ad(adId, payable(msg.sender), _hash, _start, _end, msg.value);
+        AdNetworkSet.Ad memory ad = AdNetworkSet.Ad(adId, _inventoryId, payable(msg.sender), _hash, _hashForDelivery, _start, _end, msg.value);
         require(_ads.add(adId, ad), "ads must be added correctly");
 
         _requestApproval[adId] = _inventoryId;
@@ -147,7 +147,7 @@ contract AdNetwork {
         address payable adOwner = ad.owner;
         uint paybackPrice = ad.price;
 
-        (bool r, ) = adOwner.call{value: paybackPrice}("");
+        (bool r,) = adOwner.call{value : paybackPrice}("");
         require(r, "Failed to payback lock values");
         _ads.remove(_adId);
 
@@ -185,13 +185,20 @@ contract AdNetwork {
     }
 
     function getAdsOf(uint256 _inventoryId) external view returns (
-        uint256[] memory, bytes32[] memory, uint32[] memory, uint32[] memory
+        uint256[] memory adIds,
+        uint256[] memory inventoryIds,
+        bytes32[] memory adHashes,
+        bytes32[] memory adHashForDeliveries,
+        uint32[] memory starts,
+        uint32[] memory ends
     ) {
         uint inventoryAdCount = _inventoryAdCount[_inventoryId];
-        uint256[] memory adIds = new uint256[](inventoryAdCount);
-        bytes32[] memory adHashes = new bytes32[](inventoryAdCount);
-        uint32[] memory starts = new uint32[](inventoryAdCount);
-        uint32[] memory ends = new uint32[](inventoryAdCount);
+        adIds = new uint256[](inventoryAdCount);
+        inventoryIds = new uint256[](inventoryAdCount);
+        adHashes = new bytes32[](inventoryAdCount);
+        adHashForDeliveries = new bytes32[](inventoryAdCount);
+        starts = new uint32[](inventoryAdCount);
+        ends = new uint32[](inventoryAdCount);
 
         uint adIdx = 0;
         for (uint idx = 0; idx < _ads._values.length; idx++) {
@@ -202,22 +209,61 @@ contract AdNetwork {
 
             adIds[adIdx] = ad.adId;
             adHashes[adIdx] = ad.hash;
+            adHashForDeliveries[adIdx] = ad.hashForDelivery;
             starts[adIdx] = ad.start;
             ends[adIdx] = ad.end;
             adIdx++;
         }
+    }
 
-        return (adIds, adHashes, starts, ends);
+    function getAdsByOwnerAddress(address _ownerAddress) external view returns (
+        uint256[] memory adIds,
+        uint256[] memory inventoryIds,
+        bytes32[] memory adHashes,
+        uint32[] memory starts,
+        uint32[] memory ends,
+        bool[] memory approved
+    ) {
+        uint inventoryAdCount = _ownerAdCount[_ownerAddress];
+
+        adIds = new uint256[](inventoryAdCount);
+        inventoryIds = new uint256[](inventoryAdCount);
+        adHashes = new bytes32[](inventoryAdCount);
+        starts = new uint32[](inventoryAdCount);
+        ends = new uint32[](inventoryAdCount);
+        approved = new bool[](inventoryAdCount);
+
+        uint adIdx = 0;
+        for (uint idx = 0; idx < _ads._values.length; idx++) {
+            AdNetworkSet.Ad storage ad = _ads._values[idx];
+            if (ad.owner != _ownerAddress) {
+                continue;
+            }
+
+            adIds[adIdx] = ad.adId;
+            inventoryIds[adIdx] = ad.inventoryId;
+            adHashes[adIdx] = ad.hash;
+            starts[adIdx] = ad.start;
+            ends[adIdx] = ad.end;
+            approved[adIdx] = _adToInventory[ad.adId] == ad.inventoryId;
+            adIdx++;
+        }
     }
 
     function getAdsWaitingForApprovalOf(uint256 _inventoryId) external view returns (
-        uint256[] memory, bytes32[] memory, uint32[] memory, uint32[] memory
+        uint256[] memory adIds,
+        uint256[] memory inventoryIds,
+        bytes32[] memory adHashes,
+        uint32[] memory starts,
+        uint32[] memory ends
     ) {
         uint inventoryWaitAdCount = _inventoryWaitAdCount[_inventoryId];
-        uint256[] memory adIds = new uint256[](inventoryWaitAdCount);
-        bytes32[] memory adHashes = new bytes32[](inventoryWaitAdCount);
-        uint32[] memory starts = new uint32[](inventoryWaitAdCount);
-        uint32[] memory ends = new uint32[](inventoryWaitAdCount);
+
+        adIds = new uint256[](inventoryWaitAdCount);
+        inventoryIds = new uint256[](inventoryWaitAdCount);
+        adHashes = new bytes32[](inventoryWaitAdCount);
+        starts = new uint32[](inventoryWaitAdCount);
+        ends = new uint32[](inventoryWaitAdCount);
 
         uint adIdx = 0;
         for (uint idx = 0; idx < _ads._values.length; idx++) {
@@ -227,13 +273,64 @@ contract AdNetwork {
             }
 
             adIds[adIdx] = ad.adId;
+            inventoryIds[adIdx] = ad.inventoryId;
             adHashes[adIdx] = ad.hash;
             starts[adIdx] = ad.start;
             ends[adIdx] = ad.end;
             adIdx++;
         }
+    }
 
-        return (adIds, adHashes, starts, ends);
+    function getInventory(uint256 _inventoryId) external view returns (
+        uint256 inventoryId,
+        address owner,
+        string memory name,
+        string memory uri,
+        string memory publicKey,
+        uint256 floorPrice
+    ) {
+        AdNetworkSet.Inventory storage inventory = _inventories.get(_inventoryId);
+        require(inventory.inventoryId == _inventoryId, "requested inventory id is invalid");
+
+        inventoryId = inventory.inventoryId;
+        owner = inventory.owner;
+        name = inventory.name;
+        uri = inventory.uri;
+        publicKey = inventory.publicKey;
+        floorPrice = inventory.floorPrice;
+    }
+
+    function getInventories(uint offset, uint limit) external view returns (
+        uint256[] memory inventoryIds,
+        address[] memory owners,
+        string[] memory names,
+        string[] memory uris,
+        string[] memory publicKeys,
+        uint256[] memory floorPrices
+    ) {
+        require(limit > 0 && limit <= 50, "Inventory can be retrieve up to 30 items at the same time");
+        require(offset >= 0 && offset <= _inventories._values.length);
+
+        uint upper = _inventories._values.length.min(offset + limit);
+        inventoryIds = new uint256[](upper);
+        owners = new address[](upper);
+        names = new string[](upper);
+        uris = new string[](upper);
+        publicKeys = new string[](upper);
+        floorPrices = new uint256[](upper);
+
+        uint inventoryIdx = 0;
+        for (uint idx = offset; idx < upper; idx++) {
+            AdNetworkSet.Inventory storage inventory = _inventories._values[idx];
+
+            inventoryIds[inventoryIdx] = inventory.inventoryId;
+            owners[inventoryIdx] = inventory.owner;
+            names[inventoryIdx] = inventory.name;
+            uris[inventoryIdx] = inventory.uri;
+            publicKeys[inventoryIdx] = inventory.publicKey;
+            floorPrices[inventoryIdx] = inventory.floorPrice;
+            inventoryIdx++;
+        }
     }
 
     function getExpiredAdIds(uint256 _inventoryId) external view returns (uint256[] memory) {
