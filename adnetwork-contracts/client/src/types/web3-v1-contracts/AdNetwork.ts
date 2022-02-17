@@ -101,12 +101,14 @@ export interface AdNetwork extends BaseContract {
       adHashForDeliveries: string[];
       starts: string[];
       ends: string[];
+      approved: boolean[];
       0: string[];
       1: string[];
       2: string[];
       3: string[];
       4: string[];
       5: string[];
+      6: boolean[];
     }>;
 
     getAdsByOwnerAddress(_ownerAddress: string): NonPayableTransactionObject<{
@@ -122,6 +124,23 @@ export interface AdNetwork extends BaseContract {
       3: string[];
       4: string[];
       5: boolean[];
+    }>;
+
+    getInventoriesByOwnerAddress(
+      _ownerAddress: string
+    ): NonPayableTransactionObject<{
+      inventoryIds: string[];
+      owners: string[];
+      names: string[];
+      uris: string[];
+      publicKeys: string[];
+      floorPrices: string[];
+      0: string[];
+      1: string[];
+      2: string[];
+      3: string[];
+      4: string[];
+      5: string[];
     }>;
 
     getAdsWaitingForApprovalOf(

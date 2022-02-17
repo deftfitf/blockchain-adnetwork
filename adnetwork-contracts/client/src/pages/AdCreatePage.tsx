@@ -92,7 +92,6 @@ export const AdCreatePage = (): JSX.Element => {
 
     const adFormatV1 = nullableAdToNonNullableConvert(ad);
     const encodedAdFormatV1 = await encodeAdFormatV1(adFormatV1, aesEncryptionKey, inventory.publicKey);
-    // TODO: use public key for delivery;
     const encodedAdFormatV1ForDelivery = await encodeAdFormatV1(adFormatV1, aesEncryptionKey, inventory.publicKey);
 
     const adHash = await state.adManageApi.createAd(encodedAdFormatV1);

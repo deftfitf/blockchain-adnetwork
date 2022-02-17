@@ -25,6 +25,7 @@ import {AdManagePage} from "./pages/AdManagePage";
 import {AdCreatePage} from "./pages/AdCreatePage";
 import {InventoriesPage} from "./pages/InventoriesPage";
 import {InventoryCreatePage} from "./pages/InventoryCreatePage";
+import {InventoryManagePage} from "./pages/InventoryManagePage";
 
 export type AppState = {
   web3: Web3;
@@ -85,9 +86,9 @@ export const routes: RouteDefinition[] = [
     needLogin: true,
   },
   {
-    path: "/inventories",
+    path: "/inventories/discovery",
     element: <InventoriesPage/>,
-    title: "Inventories",
+    title: "Discovery Inventories",
     displayAppBar: true,
     needLogin: true,
   },
@@ -97,7 +98,14 @@ export const routes: RouteDefinition[] = [
     title: "Inventory Create",
     displayAppBar: false,
     needLogin: true,
-  }
+  },
+  {
+    path: "/inventories",
+    element: <InventoryManagePage/>,
+    title: "Inventory Manage",
+    displayAppBar: true,
+    needLogin: true,
+  },
 ];
 
 export type AppStateContext = {
@@ -123,7 +131,7 @@ const App = (): JSX.Element => {
         const instance = new AdNetworkContractClient((new web3.eth.Contract(
             adNetworkAbi.abi as any,
             // deployedNetwork && deployedNetwork.address,
-            "0xD3Cbd9f73Ef33c6279965cBAAb0bB6d2Af6Ec1FF"
+            "0xefbd1daD62548302fE597179199dB90826D5c1ab"
         ) as any) as AdNetwork);
 
         const axiosInstance = axios.create({

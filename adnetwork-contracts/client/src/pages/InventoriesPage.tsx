@@ -120,6 +120,6 @@ export const InventoriesPage = (): JSX.Element => {
           </Button>
         </div>
       </React.Fragment>
-  )
+  );
 
 }

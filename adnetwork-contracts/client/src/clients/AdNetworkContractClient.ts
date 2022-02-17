@@ -79,6 +79,33 @@ export class AdNetworkContractClient {
     return result.transactionHash;
   }
 
+  approveAd = async (inventoryOwner: string, inventoryId: number, adId: number): Promise<string> => {
+    const result = await this.adNetworkContract
+        .methods
+        .approveAd(inventoryId, adId)
+        .send({from: inventoryOwner});
+
+    return result.transactionHash;
+  }
+
+  rejectAd = async (inventoryOwner: string, inventoryId: number, adId: number): Promise<string> => {
+    const result = await this.adNetworkContract
+        .methods
+        .rejectAd(inventoryId, adId)
+        .send({from: inventoryOwner});
+
+    return result.transactionHash;
+  }
+
+  collectAd = async (collector: string, inventoryId: number, adId: number): Promise<string> => {
+    const result = await this.adNetworkContract
+        .methods
+        .collectAd(inventoryId, adId)
+        .send({from: collector});
+
+    return result.transactionHash;
+  }
+
   getInventory = async (inventoryId: number): Promise<Inventory | null> => {
     try {
       const result = await this.adNetworkContract.methods
@@ -104,6 +131,54 @@ export class AdNetworkContractClient {
         .getInventories(offset, limit)
         .call();
 
+    return this.adaptInventoryResult(result);
+  }
+
+  getInventoriesByOwnerAddress = async (ownerAddress: string): Promise<Inventory[]> => {
+    const result = await this.adNetworkContract.methods
+        .getInventoriesByOwnerAddress(ownerAddress)
+        .call();
+
+    return this.adaptInventoryResult(result);
+  }
+
+  getAdsOf = async (inventoryId: number): Promise<Ad[]> => {
+    const result = await this.adNetworkContract.methods
+        .getAdsOf(inventoryId)
+        .call();
+
+    const length = result["0"].length;
+    const ads: Ad[] = [];
+    for (let idx = 0; idx < length; idx++) {
+      ads.push({
+        adId: Number.parseInt(result["adIds"][idx]),
+        ownerAddress: "(omitted)",
+        inventoryId: Number.parseInt(result["inventoryIds"][idx]),
+        adHash: result["adHashes"][idx],
+        adHashForDelivery: result["adHashForDeliveries"][idx],
+        start: Number.parseInt(result["starts"][idx]),
+        end: Number.parseInt(result["ends"][idx]),
+        approved: result["approved"][idx],
+      })
+    }
+
+    return ads;
+  }
+
+  private adaptInventoryResult = (result: {
+    inventoryIds: string[];
+    owners: string[];
+    names: string[];
+    uris: string[];
+    publicKeys: string[];
+    floorPrices: string[];
+    0: string[];
+    1: string[];
+    2: string[];
+    3: string[];
+    4: string[];
+    5: string[];
+  }): Inventory[] => {
     const length = result["0"].length;
     const inventories: Inventory[] = [];
     for (let idx = 0; idx < length; idx++) {
@@ -116,8 +191,7 @@ export class AdNetworkContractClient {
         floorPrice: Number.parseInt(result["floorPrices"][idx]),
       });
     }
-
     return inventories;
-  }
+  };
 
 }

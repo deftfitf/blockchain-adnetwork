@@ -1,5 +1,7 @@
 import React, {useContext, useEffect, useState} from "react";
 import {AppStateCtx} from "../App";
+import {Ad, Inventory} from "../clients/AdNetworkContractModels";
+import {Link, useNavigate, useParams} from "react-router-dom";
 import {
   Button,
   Card,
@@ -9,33 +11,57 @@ import {
   Grid,
   Typography
 } from "@material-ui/core";
-import {Ad} from "../clients/AdNetworkContractModels";
-import {Link} from "react-router-dom";
 import moment from "moment";
 
-export const AdManagePage = (): JSX.Element => {
+export const InventoryDetailPage = (): JSX.Element => {
   const ctx = useContext(AppStateCtx);
+  const navigate = useNavigate();
   if (!ctx || !ctx.state.user) {
+    navigate("/");
     return <p>Please Login</p>;
+  }
+  const {inventoryId: _inventoryId} = useParams<{ inventoryId: string }>();
+  let inventoryId: number;
+  if (!_inventoryId) {
+    navigate("/inventories");
+    return <React.Fragment/>;
+  }
+  inventoryId = Number.parseInt(_inventoryId);
+  const [inventory, setInventory] = useState<Inventory>();
+  if (!inventory) {
+    navigate("/inventories");
+    return <React.Fragment/>;
   }
   const state = ctx.state;
   const user = ctx.state.user;
   const [ads, setAds] = useState<Ad[]>([]);
+  const [transactionHash, setTransactionHash] = useState<string>();
 
   useEffect(() => {
     const init = async () => {
-      setAds(await state.contract.getAdsByOwnerAddress(user.account));
+      const inventory = await state.contract.getInventory(inventoryId);
+      if (inventory) {
+        setInventory(inventory);
+      }
+      setAds(await state.contract.getAdsOf(inventoryId));
     };
     init();
 
     return () => {
     };
   });
-  const [transactionHash, setTransactionHash] = useState<string>();
 
   const isAdExpired = (ad: Ad): boolean => {
     // If this ad is expired over the delivery term, it can be collected by ad or inventory owner either.
     return moment().unix() > ad.end;
+  };
+
+  const onApprove = async (inventoryId: number, adId: number) => {
+    setTransactionHash(await state.contract.approveAd(user.account, inventoryId, adId));
+  };
+
+  const onReject = async (inventoryId: number, adId: number) => {
+    setTransactionHash(await state.contract.rejectAd(user.account, inventoryId, adId));
   };
 
   const onCollect = async (inventoryId: number, adId: number) => {
@@ -45,7 +71,7 @@ export const AdManagePage = (): JSX.Element => {
   return (
       <React.Fragment>
         <Typography variant="h4" gutterBottom={true}>
-          Ad Management
+          Your Inventories
         </Typography>
         <div>
           <table>
@@ -65,13 +91,29 @@ export const AdManagePage = (): JSX.Element => {
               variant="contained"
               color="primary"
               component={Link}
-              to="/ads/create"
+              to="/inventories/create"
           >
-            Create new ad
+            Create new inventory
           </Button>
 
           <Typography variant="h4" gutterBottom={true}>
-            Your Ads
+            Your own Inventories
+          </Typography>
+          <Card>
+            <CardContent>
+              <Typography gutterBottom variant="h5" component="h2">
+                Inventory ID: {inventory.inventoryId}
+              </Typography>
+              <Typography>NAME: {inventory.inventoryName}</Typography>
+              <Typography>URL: {inventory.inventoryUrl}</Typography>
+              <Typography>Public Key: {inventory.publicKey}</Typography>
+              <Typography>Owner Address: {inventory.ownerAddress}</Typography>
+              <Typography>Floor Price: {inventory.floorPrice}</Typography>
+            </CardContent>
+          </Card>
+
+          <Typography variant="h4" gutterBottom={true}>
+            List of ads set in the inventory
           </Typography>
           <Container maxWidth="md">
             <Grid container spacing={4}>
@@ -96,13 +138,23 @@ export const AdManagePage = (): JSX.Element => {
                           Ad Hash For Delivery: {ad.adHashForDelivery}
                         </Typography>
                       </CardContent>
-                      {isAdExpired(ad) &&
-                          <CardActions>
+                      <CardActions>
+                        {!ad.approved && <Button
+                            size="small" variant="contained" color="primary"
+                            onClick={() => onApprove(ad.inventoryId, ad.adId)}>
+                          Approve
+                        </Button>}
+                        {!ad.approved && <Button
+                            size="small" variant="contained" color="secondary"
+                            onClick={() => onReject(ad.inventoryId, ad.adId)}>
+                          Reject
+                        </Button>}
+                        {isAdExpired(ad) &&
                             <Button size="small" variant="outlined"
                                     onClick={() => onCollect(ad.inventoryId, ad.adId)}>
                               Collect
-                            </Button>
-                          </CardActions>}
+                            </Button>}
+                      </CardActions>
                     </Card>
                   </Grid>
               ))}
@@ -116,6 +168,6 @@ export const AdManagePage = (): JSX.Element => {
           </div>}
         </div>
       </React.Fragment>
-  )
+  );
 
 }
