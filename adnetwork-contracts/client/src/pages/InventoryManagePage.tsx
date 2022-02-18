@@ -31,8 +31,8 @@ export const InventoryManagePage = (): JSX.Element => {
 
     return () => {
     };
-  });
-  
+  }, []);
+
   return (
       <React.Fragment>
         <Typography variant="h4" gutterBottom={true}>

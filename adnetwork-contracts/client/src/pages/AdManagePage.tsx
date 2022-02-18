@@ -30,7 +30,7 @@ export const AdManagePage = (): JSX.Element => {
 
     return () => {
     };
-  });
+  }, []);
   const [transactionHash, setTransactionHash] = useState<string>();
 
   const isAdExpired = (ad: Ad): boolean => {

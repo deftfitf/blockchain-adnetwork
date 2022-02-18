@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import './App.css';
 import Web3 from "web3";
 import {AdNetwork} from "./types/web3-v1-contracts/AdNetwork";
-import adNetworkAbi from "./contracts/AdNetwork.json";
+import {abi, networks} from "./contracts/AdNetwork.json";
 import getWeb3 from "./getWeb3";
 import {
   AppBar,
@@ -26,10 +26,11 @@ import {AdCreatePage} from "./pages/AdCreatePage";
 import {InventoriesPage} from "./pages/InventoriesPage";
 import {InventoryCreatePage} from "./pages/InventoryCreatePage";
 import {InventoryManagePage} from "./pages/InventoryManagePage";
+import {InventoryDetailPage} from "./pages/InventoryDetailPage";
 
 export type AppState = {
   web3: Web3;
-  networkId: number,
+  networkId: string,
   accounts: string[];
   contract: AdNetworkContractClient;
   adManageApi: AdManageApiClient;
@@ -106,6 +107,13 @@ export const routes: RouteDefinition[] = [
     displayAppBar: true,
     needLogin: true,
   },
+  {
+    path: "/inventories/:inventoryId",
+    element: <InventoryDetailPage/>,
+    title: "Inventory Manage",
+    displayAppBar: false,
+    needLogin: true,
+  },
 ];
 
 export type AppStateContext = {
@@ -126,12 +134,11 @@ const App = (): JSX.Element => {
 
         const accounts = await web3.eth.getAccounts();
 
-        const networkId = await web3.eth.net.getId();
-        // const deployedNetwork = adNetworkAbi.networks[networkId];
+        const networkId = (await web3.eth.net.getId()).toString() as keyof typeof networks;
+        const deployedNetwork = networks[networkId];
         const instance = new AdNetworkContractClient((new web3.eth.Contract(
-            adNetworkAbi.abi as any,
-            // deployedNetwork && deployedNetwork.address,
-            "0xefbd1daD62548302fE597179199dB90826D5c1ab"
+            abi as any,
+            deployedNetwork && deployedNetwork.address,
         ) as any) as AdNetwork);
 
         const axiosInstance = axios.create({

@@ -52,6 +52,7 @@ contract AdNetwork {
 
         AdNetworkSet.Inventory memory inventory = AdNetworkSet.Inventory(inventoryId, payable(msg.sender), name, uri, publicKey, floorPrice);
         _inventories.add(inventoryId, inventory);
+        _ownerInventoryCount[msg.sender]++;
         emit InventoryCreated(inventoryId);
 
         return inventoryId;
@@ -68,6 +69,7 @@ contract AdNetwork {
             "Only inventory owners can remove inventory.");
 
         _inventories.remove(_inventoryId);
+        _ownerInventoryCount[msg.sender]--;
     }
 
     function createAd(uint256 _inventoryId, bytes32 _hash, bytes32 _hashForDelivery, uint32 _start, uint32 _end) external payable returns (uint256) {
@@ -144,6 +146,7 @@ contract AdNetwork {
         delete _requestApproval[_adId];
         _inventoryWaitAdCount[_inventoryId]--;
         AdNetworkSet.Ad storage ad = _ads.get(_adId);
+        _ownerAdCount[ad.owner]--;
         address payable adOwner = ad.owner;
         uint paybackPrice = ad.price;
 
@@ -190,28 +193,32 @@ contract AdNetwork {
         bytes32[] memory adHashes,
         bytes32[] memory adHashForDeliveries,
         uint32[] memory starts,
-        uint32[] memory ends
+        uint32[] memory ends,
+        bool[] memory approved
     ) {
-        uint inventoryAdCount = _inventoryAdCount[_inventoryId];
+        uint inventoryAdCount = _inventoryAdCount[_inventoryId] + _inventoryWaitAdCount[_inventoryId];
         adIds = new uint256[](inventoryAdCount);
         inventoryIds = new uint256[](inventoryAdCount);
         adHashes = new bytes32[](inventoryAdCount);
         adHashForDeliveries = new bytes32[](inventoryAdCount);
         starts = new uint32[](inventoryAdCount);
         ends = new uint32[](inventoryAdCount);
+        approved = new bool[](inventoryAdCount);
 
         uint adIdx = 0;
         for (uint idx = 0; idx < _ads._values.length; idx++) {
             AdNetworkSet.Ad storage ad = _ads._values[idx];
-            if (_adToInventory[ad.adId] != _inventoryId) {
+            if (ad.inventoryId != _inventoryId) {
                 continue;
             }
 
             adIds[adIdx] = ad.adId;
+            inventoryIds[adIdx] = ad.inventoryId;
             adHashes[adIdx] = ad.hash;
             adHashForDeliveries[adIdx] = ad.hashForDelivery;
             starts[adIdx] = ad.start;
             ends[adIdx] = ad.end;
+            approved[adIdx] = _adToInventory[ad.adId] == ad.inventoryId;
             adIdx++;
         }
     }
@@ -250,34 +257,37 @@ contract AdNetwork {
         }
     }
 
-    function getAdsWaitingForApprovalOf(uint256 _inventoryId) external view returns (
-        uint256[] memory adIds,
+    function getInventoriesByOwnerAddress(address _ownerAddress) external view returns (
         uint256[] memory inventoryIds,
-        bytes32[] memory adHashes,
-        uint32[] memory starts,
-        uint32[] memory ends
+        address[] memory owners,
+        string[] memory names,
+        string[] memory uris,
+        string[] memory publicKeys,
+        uint256[] memory floorPrices
     ) {
-        uint inventoryWaitAdCount = _inventoryWaitAdCount[_inventoryId];
+        uint ownerInventoryCount = _ownerInventoryCount[_ownerAddress];
 
-        adIds = new uint256[](inventoryWaitAdCount);
-        inventoryIds = new uint256[](inventoryWaitAdCount);
-        adHashes = new bytes32[](inventoryWaitAdCount);
-        starts = new uint32[](inventoryWaitAdCount);
-        ends = new uint32[](inventoryWaitAdCount);
+        inventoryIds = new uint256[](ownerInventoryCount);
+        owners = new address[](ownerInventoryCount);
+        names = new string[](ownerInventoryCount);
+        uris = new string[](ownerInventoryCount);
+        publicKeys = new string[](ownerInventoryCount);
+        floorPrices = new uint256[](ownerInventoryCount);
 
-        uint adIdx = 0;
-        for (uint idx = 0; idx < _ads._values.length; idx++) {
-            AdNetworkSet.Ad storage ad = _ads._values[idx];
-            if (_requestApproval[ad.adId] != _inventoryId) {
+        uint inventoryIdx = 0;
+        for (uint idx = 0; idx < _inventories._values.length; idx++) {
+            AdNetworkSet.Inventory storage inventory = _inventories._values[idx];
+            if (inventory.owner != _ownerAddress) {
                 continue;
             }
 
-            adIds[adIdx] = ad.adId;
-            inventoryIds[adIdx] = ad.inventoryId;
-            adHashes[adIdx] = ad.hash;
-            starts[adIdx] = ad.start;
-            ends[adIdx] = ad.end;
-            adIdx++;
+            inventoryIds[inventoryIdx] = inventory.inventoryId;
+            owners[inventoryIdx] = inventory.owner;
+            names[inventoryIdx] = inventory.name;
+            uris[inventoryIdx] = inventory.uri;
+            publicKeys[inventoryIdx] = inventory.publicKey;
+            floorPrices[inventoryIdx] = inventory.floorPrice;
+            inventoryIdx++;
         }
     }
 

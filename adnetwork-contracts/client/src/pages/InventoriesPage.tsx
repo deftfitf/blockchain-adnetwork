@@ -55,7 +55,7 @@ export const InventoriesPage = (): JSX.Element => {
 
     return () => {
     };
-  });
+  }, [range]);
 
   return (
       <React.Fragment>

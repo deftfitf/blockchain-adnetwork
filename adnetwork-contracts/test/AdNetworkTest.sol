@@ -31,6 +31,12 @@ contract AdNetworkTest {
         uint256 inventoryId = inventoryOwner.createAdInventory(name, uri, publicKey, floorPrice);
 
         Assert.equal(inventoryId, 1, "Ad Inventory can be created");
+
+        (uint256[] memory inventoryIds,,,,,) = adNetwork.getInventoriesByOwnerAddress(address(this));
+        Assert.equal(inventoryIds.length, 0, "Inventory can't be retrieve by not owner address");
+
+        (inventoryIds,,,,,) = inventoryOwner.getInventoriesByOwnerAddress();
+        Assert.equal(inventoryIds.length, 1, "Inventory can be retrieve by owner address");
     }
 
     function testCreateAd() public {
@@ -41,15 +47,11 @@ contract AdNetworkTest {
         uint32 end = uint32(start + 60 * 60 + 1000);
 
         uint256 adId = adOwner.createAd{value : 0.01 ether}(inventoryId, hash, hashForDelivery, start, end);
-
         Assert.equal(adId, 1, "Ad can be created");
 
-        uint256[] memory adIds;
-        (adIds,,,,,) = adNetwork.getAdsOf(inventoryId);
-        Assert.equal(adIds.length, 0, "Ad can be created, but it isn't still approved by inventory owner.");
-
-        (adIds,,,,) = adNetwork.getAdsWaitingForApprovalOf(inventoryId);
+        (uint256[] memory adIds,,,,,,bool[] memory approved) = adNetwork.getAdsOf(inventoryId);
         Assert.equal(adIds.length, 1, "Ad can be added to waiting list for approval");
+        Assert.equal(approved[0], false, "Ad mustn't be approved.");
     }
 
     function testFailedToCreateAdBecauseOfIllegalStartTime() public {
@@ -66,8 +68,7 @@ contract AdNetworkTest {
 
         Assert.isFalse(r, "start time must be larger than block.timestamp + about 12 hours");
 
-        uint256[] memory adIds;
-        (adIds,,,,) = adNetwork.getAdsWaitingForApprovalOf(inventoryId);
+        (uint256[] memory adIds,,,,,,) = adNetwork.getAdsOf(inventoryId);
         Assert.equal(adIds.length, 1, "Ad can not be added if it meets required condition");
     }
 
@@ -85,8 +86,7 @@ contract AdNetworkTest {
 
         Assert.isFalse(r, "start time must be larger than block.timestamp + about 12 hours");
 
-        uint256[] memory adIds;
-        (adIds,,,,) = adNetwork.getAdsWaitingForApprovalOf(inventoryId);
+        (uint256[] memory adIds,,,,,,) = adNetwork.getAdsOf(inventoryId);
         Assert.equal(adIds.length, 1, "Ad can not be added if it meets required condition");
     }
 
@@ -104,8 +104,7 @@ contract AdNetworkTest {
 
         Assert.isFalse(r, "delivery period must be not less than 1 hour");
 
-        uint256[] memory adIds;
-        (adIds,,,,) = adNetwork.getAdsWaitingForApprovalOf(inventoryId);
+        (uint256[] memory adIds,,,,,,) = adNetwork.getAdsOf(inventoryId);
         Assert.equal(adIds.length, 1, "Ad can not be added if it meets required condition");
     }
 
@@ -123,8 +122,7 @@ contract AdNetworkTest {
 
         Assert.isFalse(r, "ad price must be larger than floor price set by inventory owner.");
 
-        uint256[] memory adIds;
-        (adIds,,,,) = adNetwork.getAdsWaitingForApprovalOf(inventoryId);
+        (uint256[] memory adIds,,,,,,) = adNetwork.getAdsOf(inventoryId);
         Assert.equal(adIds.length, 1, "Ad can not be added if it meets required condition");
     }
 
@@ -146,12 +144,9 @@ contract AdNetworkTest {
 
         inventoryOwner.approveAd(inventoryId, adId);
 
-        uint256[] memory adIds;
-        (adIds,,,,,) = adNetwork.getAdsOf(inventoryId);
+        (uint256[] memory adIds,,,,,,bool[] memory approved) = adNetwork.getAdsOf(inventoryId);
         Assert.equal(adIds.length, 1, "Ad can be approved.");
-
-        (adIds,,,,) = adNetwork.getAdsWaitingForApprovalOf(inventoryId);
-        Assert.equal(adIds.length, 0, "Ad can be added to waiting list for approval");
+        Assert.equal(approved[0], true, "Ad must be approved.");
     }
 
     function testCannotRejectAdAfterApprove() public {
@@ -176,15 +171,17 @@ contract AdNetworkTest {
         uint256 adId = adOwner.createAd{value : 0.01 ether}(inventoryId, hash, hashForDelivery, start, end);
         Assert.equal(adId, 2, "Ad can be created");
 
-        uint256[] memory adIds;
-        (adIds,,,,) = adNetwork.getAdsWaitingForApprovalOf(inventoryId);
-        Assert.equal(adIds.length, 1, "Ad can be added to waiting list for approval");
+        (uint256[] memory adIds,,,,,,bool[] memory approved) = adNetwork.getAdsOf(inventoryId);
+        Assert.equal(adIds.length, 2, "Ad can be added to waiting list for approval");
+        Assert.equal(approved[0], true, "Ad must be approved.");
+        Assert.equal(approved[1], false, "Ad haven't been approved.");
 
         ////// set up
 
         inventoryOwner.rejectAd(inventoryId, adId);
-        (adIds,,,,) = adNetwork.getAdsWaitingForApprovalOf(inventoryId);
-        Assert.equal(adIds.length, 0, "Ad must be rejected");
+        (adIds,,,,,,approved) = adNetwork.getAdsOf(inventoryId);
+        Assert.equal(adIds.length, 1, "Ad must be rejected");
+        Assert.equal(approved[0], true, "Ad must be approved.");
     }
 
     function testGetInventory() public {
@@ -243,6 +240,18 @@ contract InventoryOwner {
 
     function removeAdInventory(uint256 _inventoryId) external {
         adNetwork.removeAdInventory(_inventoryId);
+    }
+
+    function getInventoriesByOwnerAddress() external view returns (
+        uint256[] memory inventoryIds,
+        address[] memory owners,
+        string[] memory names,
+        string[] memory uris,
+        string[] memory publicKeys,
+        uint256[] memory floorPrices
+    ) {
+        (inventoryIds, owners, names, uris, publicKeys, floorPrices) =
+        adNetwork.getInventoriesByOwnerAddress(address(this));
     }
 
     function approveAd(uint256 _inventoryId, uint256 _adId) external {

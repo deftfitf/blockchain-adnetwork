@@ -143,21 +143,6 @@ export interface AdNetwork extends BaseContract {
       5: string[];
     }>;
 
-    getAdsWaitingForApprovalOf(
-      _inventoryId: number | string | BN
-    ): NonPayableTransactionObject<{
-      adIds: string[];
-      inventoryIds: string[];
-      adHashes: string[];
-      starts: string[];
-      ends: string[];
-      0: string[];
-      1: string[];
-      2: string[];
-      3: string[];
-      4: string[];
-    }>;
-
     getInventory(
       _inventoryId: number | string | BN
     ): NonPayableTransactionObject<{

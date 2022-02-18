@@ -51,7 +51,7 @@ export const AdCreatePage = (): JSX.Element => {
   useEffect(() => {
     return () => {
     };
-  });
+  }, []);
 
   const encodeAdFormatV1 = async (adFormatV1: AdFormatV1, encryptionKey: string, publicKey: string): Promise<string> => {
     if (!encryptionKey) {

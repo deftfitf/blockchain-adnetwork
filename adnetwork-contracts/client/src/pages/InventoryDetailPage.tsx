@@ -1,7 +1,7 @@
 import React, {useContext, useEffect, useState} from "react";
 import {AppStateCtx} from "../App";
 import {Ad, Inventory} from "../clients/AdNetworkContractModels";
-import {Link, useNavigate, useParams} from "react-router-dom";
+import {Link, useParams} from "react-router-dom";
 import {
   Button,
   Card,
@@ -15,23 +15,16 @@ import moment from "moment";
 
 export const InventoryDetailPage = (): JSX.Element => {
   const ctx = useContext(AppStateCtx);
-  const navigate = useNavigate();
   if (!ctx || !ctx.state.user) {
-    navigate("/");
     return <p>Please Login</p>;
   }
-  const {inventoryId: _inventoryId} = useParams<{ inventoryId: string }>();
-  let inventoryId: number;
+  const _inventoryId = useParams<{ inventoryId: string }>().inventoryId;
   if (!_inventoryId) {
-    navigate("/inventories");
     return <React.Fragment/>;
   }
-  inventoryId = Number.parseInt(_inventoryId);
+  const inventoryId = Number.parseInt(_inventoryId);
+
   const [inventory, setInventory] = useState<Inventory>();
-  if (!inventory) {
-    navigate("/inventories");
-    return <React.Fragment/>;
-  }
   const state = ctx.state;
   const user = ctx.state.user;
   const [ads, setAds] = useState<Ad[]>([]);
@@ -42,14 +35,18 @@ export const InventoryDetailPage = (): JSX.Element => {
       const inventory = await state.contract.getInventory(inventoryId);
       if (inventory) {
         setInventory(inventory);
+        setAds(await state.contract.getAdsOf(inventoryId));
       }
-      setAds(await state.contract.getAdsOf(inventoryId));
     };
     init();
 
     return () => {
     };
-  });
+  }, [inventoryId]);
+
+  if (!inventory) {
+    return <React.Fragment/>;
+  }
 
   const isAdExpired = (ad: Ad): boolean => {
     // If this ad is expired over the delivery term, it can be collected by ad or inventory owner either.

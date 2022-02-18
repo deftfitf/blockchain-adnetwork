@@ -147,7 +147,8 @@ export class AdNetworkContractClient {
         .getAdsOf(inventoryId)
         .call();
 
-    const length = result["0"].length;
+    console.log(result);
+    const length = result["adIds"].length;
     const ads: Ad[] = [];
     for (let idx = 0; idx < length; idx++) {
       ads.push({
