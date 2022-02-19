@@ -4,8 +4,10 @@ import lombok.NonNull;
 import lombok.Value;
 
 @Value
-public class ChallengeResponse {
+public class RegistryInventoryRequest {
 
   @NonNull
-  String challenge;
+  Long inventoryId;
+  @NonNull
+  String privateKey;
 }

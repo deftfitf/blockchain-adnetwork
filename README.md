@@ -21,6 +21,17 @@ Manager are available.
 
 This repository provides three components above, and Ad Image Serving instead of CDN.
 
+# Build contracts
+
+```sh
+# build solidity contracts
+cd adnetwork-contracts/
+truffle build
+# generate type definition file for DApps
+cd client/
+npm run typechain
+```
+
 # How to use on Ganache
 
 ## Deploy our contract to Ganache

@@ -46,6 +46,14 @@ public class StorageRepository {
     }
   }
 
+  public String load(String fileName) {
+    try {
+      return Files.readString(Paths.get(BASE_DIRECTORY, fileName));
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   public void delete(String fileName) {
     try {
       Files.deleteIfExists(Paths.get(BASE_DIRECTORY, fileName));

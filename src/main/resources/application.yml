@@ -6,3 +6,16 @@ spring.servlet.multipart:
 
 logging.level.root: DEBUG
 
+spring.profiles.default: local
+
+---
+
+spring.profiles.group.local:
+  - eth-local
+  - adnetwork-contract-local
+
+---
+
+spring.profiles.group.beta:
+  - eth-beta
+  - adnetwork-contract-beta

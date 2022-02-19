@@ -34,7 +34,8 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "lint": "eslint .",
-    "fix": "eslint --fix ."
+    "fix": "eslint --fix .",
+    "typechain": "npx typechain --target=web3-v1 --out-dir=src/types/web3-v1-contracts src/contracts/**"
   },
   "eslintConfig": {
     "extends": "react-app"
