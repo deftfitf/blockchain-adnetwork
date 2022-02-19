@@ -23,13 +23,13 @@ export const ab2str = (buf: ArrayBuffer): string => {
 }
 
 export const bytesToHexString = (arr: Uint8Array): string => {
-  return Array.from(arr).map(b => (b & 0xFF).toString(16)).join("");
+  return Array.from(arr).map(b => (b & 0xFF).toString(16).padStart(2, '0')).join("");
 }
 
 export const hexToBytes = (hexString: string): Uint8Array => {
   const arr = [];
-  for (let i = 0, len = hexString.length; i < len; i += 2) {
-    arr.push(parseInt(hexString.substring(i, 2), 16));
+  for (let i = 0; i < hexString.length; i += 2) {
+    arr.push(parseInt(hexString.substring(i, i + 2), 16));
   }
   return new Uint8Array(arr);
 }

@@ -3,15 +3,22 @@ import {AppStateCtx} from "../App";
 import {Ad, Inventory} from "../clients/AdNetworkContractModels";
 import {Link, useParams} from "react-router-dom";
 import {
+  Box,
   Button,
   Card,
   CardActions,
   CardContent,
   Container,
+  FormControl,
+  FormHelperText,
   Grid,
+  TextField,
   Typography
 } from "@material-ui/core";
 import moment from "moment";
+import RsaEncryptFunctions from "../functions/RsaEncryptFunctions";
+import AesEncryptFunctions from "../functions/AesEncryptFunctions";
+import {AdFormatV1} from "../ads/AdFormatV1";
 
 export const InventoryDetailPage = (): JSX.Element => {
   const ctx = useContext(AppStateCtx);
@@ -28,7 +35,9 @@ export const InventoryDetailPage = (): JSX.Element => {
   const state = ctx.state;
   const user = ctx.state.user;
   const [ads, setAds] = useState<Ad[]>([]);
+  const [inventoryPrivateKey, setInventoryPrivateKey] = useState<CryptoKey>();
   const [transactionHash, setTransactionHash] = useState<string>();
+  const [adFormatV1, setAdFormatV1] = useState<AdFormatV1>();
 
   useEffect(() => {
     const init = async () => {
@@ -63,6 +72,21 @@ export const InventoryDetailPage = (): JSX.Element => {
 
   const onCollect = async (inventoryId: number, adId: number) => {
     setTransactionHash(await state.contract.collectAd(user.account, inventoryId, adId));
+  }
+
+  const onDecrypt = async (adHash: string) => {
+    if (!inventoryPrivateKey) {
+      return;
+    }
+
+    const adFormat = await state.adManageApi.getAdFormat(adHash);
+    const [, encryptedEncryptionKey, ciphertext] = adFormat.split(":");
+
+    const encryptionKey = await RsaEncryptFunctions.decryptMessage(encryptedEncryptionKey, inventoryPrivateKey);
+    const secret = await AesEncryptFunctions.importSecretKey(encryptionKey);
+    const decrypted = await AesEncryptFunctions.decryptMessage(ciphertext, secret);
+
+    setAdFormatV1(JSON.parse(decrypted) as AdFormatV1);
   }
 
   return (
@@ -110,6 +134,52 @@ export const InventoryDetailPage = (): JSX.Element => {
           </Card>
 
           <Typography variant="h4" gutterBottom={true}>
+            Set inventory private key
+          </Typography>
+
+          <div>
+            <FormControl variant="standard">
+              <TextField id="private-key-input"
+                         label="Inventory Private Key"
+                         onChange={async (event) => {
+                           const privateKey = await RsaEncryptFunctions.importPrivateKey(event.target.value);
+                           setInventoryPrivateKey(privateKey);
+                         }}/>
+              <FormHelperText>Set your inventory key</FormHelperText>
+            </FormControl>
+          </div>
+
+          {adFormatV1 && <div>
+            <Typography variant="h4" gutterBottom={true}>
+              Decrypted AdFormatV1
+            </Typography>
+            <Card>
+              <CardContent>
+                <Typography gutterBottom variant="h5" component="h2">
+                  Inventory ID: {adFormatV1.inventoryId}
+                </Typography>
+                <Typography>Owner Address: {adFormatV1.ownerAddress}</Typography>
+                <Typography>
+                  Delivery
+                  Duration: {moment(adFormatV1.startTime * 1000).format()} ~ {moment(adFormatV1.endTime * 1000).format()}
+                </Typography>
+                <Typography>Ad Price: {adFormatV1.adPrice}</Typography>
+                <Typography>Ad Title: {adFormatV1.adTitle}</Typography>
+                <Typography>Ad Description: {adFormatV1.adDescription}</Typography>
+                <Typography>Landing Page URL: {adFormatV1.landingPageUrl}</Typography>
+                <Box>
+                  <Typography>Display Image URL: {adFormatV1.displayImageUrl}</Typography>
+                  <img
+                      src={adFormatV1.displayImageUrl}
+                      alt="Uploaded Ad Image"
+                      loading="lazy"
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+          </div>}
+
+          <Typography variant="h4" gutterBottom={true}>
             List of ads set in the inventory
           </Typography>
           <Container maxWidth="md">
@@ -136,6 +206,9 @@ export const InventoryDetailPage = (): JSX.Element => {
                         </Typography>
                       </CardContent>
                       <CardActions>
+                        <Button variant="outlined" onClick={() => onDecrypt(ad.adHash)}>
+                          Decrypt AdFormat
+                        </Button>
                         {!ad.approved && <Button
                             size="small" variant="contained" color="primary"
                             onClick={() => onApprove(ad.inventoryId, ad.adId)}>

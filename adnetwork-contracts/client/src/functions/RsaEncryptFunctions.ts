@@ -58,20 +58,20 @@ export default class RsaEncryptFunctions {
     return window.btoa(encodedAndEncrypted);
   }
 
-  static decryptMessage = async (message: string, publicKey: CryptoKey) => {
-    const enc = new TextEncoder();
-    const encoded = enc.encode(message);
+  static decryptMessage = async (message: string, privateKey: CryptoKey) => {
+    const binaryMessageString = window.atob(message);
+    const binaryMessage = str2ab(binaryMessageString);
 
-    const ciphertext = await window.crypto.subtle.encrypt(
+    const decrypted = await window.crypto.subtle.decrypt(
         {
           name: "RSA-OAEP"
         },
-        publicKey,
-        encoded
+        privateKey,
+        binaryMessage
     );
 
-    const encodedAndEncrypted = ab2str(ciphertext);
-    return window.btoa(encodedAndEncrypted);
+    const dec = new TextDecoder();
+    return dec.decode(decrypted);
   }
 
   static generateKeyPair = async (): Promise<[string, string]> => {

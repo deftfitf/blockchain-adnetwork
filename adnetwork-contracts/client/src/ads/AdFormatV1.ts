@@ -16,7 +16,6 @@ export interface AdFormatV1 {
 export type NullableAdFormatV1 = NullableType<AdFormatV1>;
 
 export const nullableAdToNonNullableConvert = (format: NullableAdFormatV1): AdFormatV1 => {
-  console.log(format);
   if (
       !format.inventoryId ||
       !format.ownerAddress ||

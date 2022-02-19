@@ -12,7 +12,6 @@ export const LoginPage = (): JSX.Element => {
 
   const onLogin: () => void = async () => {
     const ethUser = await login(state.web3, state.adManageApi, state.accounts[0]);
-    console.log(ethUser);
     ctx.setState({
       ...state,
       user: ethUser,

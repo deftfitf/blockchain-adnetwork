@@ -38,7 +38,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
   @Override
   public void configure(WebSecurity web) throws Exception {
     web.ignoring()
-        .antMatchers("/css/**", "/js/**", "/images/**");
+        .antMatchers("/public/images/**");
   }
 
   private EthAuthenticationProvider authenticationProvider() {
@@ -97,6 +97,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     final var corsSource = new UrlBasedCorsConfigurationSource();
     corsSource.registerCorsConfiguration("/api/**", conf);
+    corsSource.registerCorsConfiguration("/public/ad-formats/**", conf);
 
     return corsSource;
   }

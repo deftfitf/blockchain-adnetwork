@@ -68,10 +68,8 @@ export const AdCreatePage = (): JSX.Element => {
     const pemPublicKey = `-----BEGIN PUBLIC KEY-----\n${publicKey}\n-----END PUBLIC KEY-----`;
     const rsaPublicKey = await RsaEncryptFunctions.importPublicKey(pemPublicKey);
     const encryptedEncryptionKey = await RsaEncryptFunctions.encryptMessage(encryptionKey, rsaPublicKey);
-    console.debug(`${header}:${encryptedEncryptionKey}:${ciphertext}`);
-
     // return formatted text
-    return `${header}${encryptedEncryptionKey}${ciphertext}`
+    return `${header}:${encryptedEncryptionKey}:${ciphertext}`
   }
 
   const onGenerateEncryptionKey = () => {

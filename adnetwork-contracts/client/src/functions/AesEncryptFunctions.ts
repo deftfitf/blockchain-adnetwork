@@ -43,8 +43,8 @@ export default class AesEncryptFunctions {
   }
 
   static decryptMessage = async (ciphertext: string, secretKey: CryptoKey): Promise<string> => {
-    const iv = hexToBytes(ciphertext.substring(0, 12));
-    const binaryMessageString = window.atob(ciphertext.substring(12));
+    const iv = hexToBytes(ciphertext.substring(0, 24));
+    const binaryMessageString = window.atob(ciphertext.substring(24));
     const binaryMessage = str2ab(binaryMessageString);
 
     let decrypted = await window.crypto.subtle.decrypt(

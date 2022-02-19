@@ -95,6 +95,10 @@ export class AdManageApiClient {
     });
   }
 
+  getAdFormat = async (adHash: string): Promise<string> => {
+    return await this.get(`/public/ad-formats/${adHash.substring(2)}`);
+  };
+
   private get: <T, R>(path: string) => Promise<R> = async (path) => {
     try {
       const {data} = await this.axiosInstance.get(path);
