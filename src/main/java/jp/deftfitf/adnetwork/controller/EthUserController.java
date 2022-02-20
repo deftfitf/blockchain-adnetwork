@@ -36,9 +36,4 @@ public class EthUserController {
     return user;
   }
 
-//  public String login(Model model) {
-//    model.addAttribute("error", false);
-//    model.addAttribute("logout", false);
-//    return "login";
-//  }
 }
