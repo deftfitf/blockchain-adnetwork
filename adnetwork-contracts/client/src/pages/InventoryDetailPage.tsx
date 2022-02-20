@@ -38,6 +38,7 @@ export const InventoryDetailPage = (): JSX.Element => {
   const [inventoryPrivateKey, setInventoryPrivateKey] = useState<CryptoKey>();
   const [transactionHash, setTransactionHash] = useState<string>();
   const [adFormatV1, setAdFormatV1] = useState<AdFormatV1>();
+  const [privateKey, setPrivateKey] = useState<string>();
 
   useEffect(() => {
     const init = async () => {
@@ -89,6 +90,13 @@ export const InventoryDetailPage = (): JSX.Element => {
     setAdFormatV1(JSON.parse(decrypted) as AdFormatV1);
   }
 
+  const onRegister = async () => {
+    if (!privateKey) {
+      return;
+    }
+    await state.adManageApi.registerInventory(inventoryId.toString(), privateKey);
+  }
+
   return (
       <React.Fragment>
         <Typography variant="h4" gutterBottom={true}>
@@ -131,11 +139,22 @@ export const InventoryDetailPage = (): JSX.Element => {
               <Typography>Owner Address: {inventory.ownerAddress}</Typography>
               <Typography>Floor Price: {inventory.floorPrice}</Typography>
             </CardContent>
+            <CardActions>
+              <Typography>Set inventory private key</Typography>
+              <div>
+                <FormControl variant="standard">
+                  <TextField id="private-key-id"
+                             label="Private Key for Delivery"
+                             onChange={event => setPrivateKey(event.target.value)}/>
+                  <FormHelperText>Specify the private key to be set for the delivery
+                    server</FormHelperText>
+                </FormControl>
+              </div>
+              <Button variant="outlined" onClick={() => onRegister()}>
+                Register for Delivery
+              </Button>
+            </CardActions>
           </Card>
-
-          <Typography variant="h4" gutterBottom={true}>
-            Set inventory private key
-          </Typography>
 
           <div>
             <FormControl variant="standard">

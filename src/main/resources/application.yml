@@ -13,9 +13,11 @@ spring.profiles.default: local
 spring.profiles.group.local:
   - eth-local
   - adnetwork-contract-local
+  - wallet-local
 
 ---
 
 spring.profiles.group.beta:
   - eth-beta
   - adnetwork-contract-beta
+  - wallet-beta

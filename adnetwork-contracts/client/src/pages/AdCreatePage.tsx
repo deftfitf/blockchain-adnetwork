@@ -24,12 +24,6 @@ import AesEncryptFunctions from "../functions/AesEncryptFunctions";
 import {bytesToHexString} from "../functions/UtilityFunctions";
 import RsaEncryptFunctions from "../functions/RsaEncryptFunctions";
 
-// TODO
-// ${header:8bytes}${encryptedKeyWithInventoryOwnerPubkeyBytes:256bytes}${aesEncryptedAdBytes}
-// ${header:8bytes}${encryptedKeyWithDeliveryPubkeyBytes:256bytes}${aesEncryptedAdBytes}
-// それぞれのデータをアップロードした結果、SHA-3 keccak hashによりアップロード先ハッシュが決定
-// インベントリオーナーは審査のためにデータが確認可能で, 配信者も配信者の秘密鍵によって,　配信設定が可能.
-
 export const AdCreatePage = (): JSX.Element => {
   const ctx = useContext(AppStateCtx);
   if (!ctx || !ctx.state.user) {

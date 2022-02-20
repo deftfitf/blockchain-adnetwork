@@ -1,0 +1,3 @@
+eth.wallet:
+  password: ${ETH_WALLET_PATH_LOCAL:}
+  wallet-file-path: ${ETH_WALLET_FILE_PATH_LOCAL:}

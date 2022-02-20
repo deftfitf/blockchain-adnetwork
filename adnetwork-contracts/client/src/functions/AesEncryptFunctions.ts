@@ -1,6 +1,6 @@
 // https://github.com/mdn/dom-examples/blob/master/web-crypto/
 
-import {ab2str, bytesToHexString, hexToBytes, str2ab} from "./UtilityFunctions";
+import {ab2str, str2ab} from "./UtilityFunctions";
 
 export default class AesEncryptFunctions {
 
@@ -28,24 +28,28 @@ export default class AesEncryptFunctions {
     const encoded = enc.encode(message);
 
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
-    const ciphertext = await window.crypto.subtle.encrypt(
+    const ciphertext = new Uint8Array(await window.crypto.subtle.encrypt(
         {
           name: "AES-GCM",
           iv: iv
         },
         secretKey,
         encoded
-    );
+    ));
 
-    const encodedIv = bytesToHexString(iv);
-    const encodedAndEncrypted = ab2str(ciphertext);
-    return `${encodedIv}${window.btoa(encodedAndEncrypted)}`;
+    const merged = new Uint8Array(iv.length + ciphertext.length);
+    merged.set(iv, 0);
+    merged.set(ciphertext, iv.length);
+
+    return window.btoa(ab2str(merged));
   }
 
   static decryptMessage = async (ciphertext: string, secretKey: CryptoKey): Promise<string> => {
-    const iv = hexToBytes(ciphertext.substring(0, 24));
-    const binaryMessageString = window.atob(ciphertext.substring(24));
+    const binaryMessageString = window.atob(ciphertext);
     const binaryMessage = str2ab(binaryMessageString);
+
+    const iv = new Uint8Array(binaryMessage, 0, 12);
+    const ciphertextBytes = new Uint8Array(binaryMessage, 12, binaryMessage.byteLength - 12);
 
     let decrypted = await window.crypto.subtle.decrypt(
         {
@@ -53,7 +57,7 @@ export default class AesEncryptFunctions {
           iv: iv
         },
         secretKey,
-        binaryMessage
+        ciphertextBytes
     );
 
     const dec = new TextDecoder();

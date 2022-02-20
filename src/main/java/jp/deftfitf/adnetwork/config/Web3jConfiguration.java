@@ -3,6 +3,7 @@ package jp.deftfitf.adnetwork.config;
 import java.io.IOException;
 import jp.deftfitf.adnetwork.setting.AdNetworkContractSetting;
 import jp.deftfitf.adnetwork.setting.EthNetworkSetting;
+import jp.deftfitf.adnetwork.setting.WalletSetting;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

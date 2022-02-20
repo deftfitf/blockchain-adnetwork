@@ -95,6 +95,13 @@ export class AdManageApiClient {
     });
   }
 
+  registerInventory = async (inventoryId: string, pkcs8EncodedPrivateKey: string): Promise<void> => {
+    await this.post("/api/ad/registryInventory", {
+      inventoryId: inventoryId,
+      privateKey: pkcs8EncodedPrivateKey
+    })
+  }
+
   getAdFormat = async (adHash: string): Promise<string> => {
     return await this.get(`/public/ad-formats/${adHash.substring(2)}`);
   };

@@ -6,11 +6,13 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.spec.MGF1ParameterSpec;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.crypto.BadPaddingException;
@@ -19,6 +21,8 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.OAEPParameterSpec;
+import javax.crypto.spec.PSource;
 import javax.crypto.spec.SecretKeySpec;
 import jp.deftfitf.adnetwork.dto.AdFormatV1Dto;
 import lombok.NonNull;
@@ -39,17 +43,19 @@ public class InventoryCacheRepository {
   // every 5 minutes
   private static final long CACHE_LOAD_FIXED_RATE = 5 * 60 * 1000;
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final int GCM_IV_LENGTH = 12;
 
   private final Clock clock;
   private final AdNetwork adNetwork;
   private final DeliveryPrivateKeyRepository deliveryPrivateKeyRepository;
   private final StorageRepository storageRepository;
-  private volatile Map<Long, AdFormatV1Dto> adIdToAdDot = new ConcurrentHashMap<>();
+  private volatile Map<Long, AdFormatV1Dto> adIdToAdDto = new ConcurrentHashMap<>();
+  private volatile Map<Long, List<Pair<Long, AdFormatV1Dto>>> inventoryIdToAds = new ConcurrentHashMap<>();
 
   @Scheduled(fixedRate = CACHE_LOAD_FIXED_RATE)
-  public void reload() {
+  public synchronized void reload() {
     final var activeInventoryIds = deliveryPrivateKeyRepository.activeInventoryIds();
-    adIdToAdDot = activeInventoryIds.stream()
+    final var newDto = activeInventoryIds.stream()
         .map(inventoryId -> {
           final var privateKey = deliveryPrivateKeyRepository.findBy(inventoryId);
           if (privateKey.isEmpty()) {
@@ -69,8 +75,24 @@ public class InventoryCacheRepository {
         .flatMap(result -> result.getAdDto().stream())
         .collect(Collectors.toConcurrentMap(
             Pair::getKey,
-            Pair::getValue
+            Pair::getValue,
+            (l, r) -> r
         ));
+
+    final var newMap = new ConcurrentHashMap<Long, List<Pair<Long, AdFormatV1Dto>>>();
+    newDto.forEach((key, value) -> {
+      final var lst = newMap
+          .computeIfAbsent(value.getInventoryId(), k -> new ArrayList<>());
+      lst.add(Pair.of(key, value));
+    });
+
+    adIdToAdDto = newDto;
+    inventoryIdToAds = newMap;
+  }
+
+  public List<Pair<Long, AdFormatV1Dto>> findBy(long inventoryId) {
+    return Optional.ofNullable(inventoryIdToAds.get(inventoryId))
+        .orElse(List.of());
   }
 
   private List<Pair<Long, AdFormatV1Dto>> convert(
@@ -94,13 +116,14 @@ public class InventoryCacheRepository {
       }
 
       final var adId = result.component1().get(idx).longValue();
-      final var cachedAdFormatV1Dto = adIdToAdDot.get(adId);
+      final var cachedAdFormatV1Dto = adIdToAdDto.get(adId);
       if (
           cachedAdFormatV1Dto != null &&
               isInDeliveryPeriod(cachedAdFormatV1Dto.getStartTime(),
                   cachedAdFormatV1Dto.getEndTime())
       ) {
         ads.add(Pair.of(adId, cachedAdFormatV1Dto));
+        continue;
       }
 
       final var startTime = result.component5().get(idx).longValue();
@@ -118,7 +141,8 @@ public class InventoryCacheRepository {
         final var decoded = decodeAdFormatV1(privateKey, loaded);
         adFormatV1Dto = OBJECT_MAPPER.readValue(decoded, AdFormatV1Dto.class);
       } catch (Exception e) {
-        throw new RuntimeException(e);
+        log.error("decode failed: loaded={}", loaded, e);
+        continue;
       }
 
       ads.add(Pair.of(adId, adFormatV1Dto));
@@ -134,15 +158,17 @@ public class InventoryCacheRepository {
     }
     final var decodedEncryptedKey =
         Base64.getDecoder().decode(elements[1].getBytes(StandardCharsets.UTF_8));
-    final var iv = new GCMParameterSpec(
-        128, Numeric.hexStringToByteArray(elements[2].substring(24)), 0, 12);
-    final var ciphertext =
-        Base64.getDecoder().decode(elements[2].substring(24).getBytes(StandardCharsets.UTF_8));
+    final var ciphertext = Base64.getDecoder().decode(elements[2]);
+    final var iv = new GCMParameterSpec(128, ciphertext, 0, GCM_IV_LENGTH);
 
     final Cipher cipher;
     try {
-      cipher = Cipher.getInstance("RSA/ECB/OAEPwithSHA1andMGF1Padding");
-      cipher.init(Cipher.WRAP_MODE, privateKey);
+      cipher = Cipher.getInstance("RSA/ECB/OAEPPadding");
+      final var oaepParams = new OAEPParameterSpec(
+          "SHA-256", "MGF1",
+          new MGF1ParameterSpec("SHA-256"),
+          PSource.PSpecified.DEFAULT);
+      cipher.init(Cipher.DECRYPT_MODE, privateKey, oaepParams);
     } catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException e) {
       throw new RuntimeException(e);
     }
@@ -162,8 +188,13 @@ public class InventoryCacheRepository {
       throw new RuntimeException(e);
     }
 
-    aesCipher.init(Cipher.DECRYPT_MODE, aesSecret, iv);
-    final byte[] plainText = cipher.doFinal(ciphertext, 0, ciphertext.length);
+    final byte[] plainText;
+    try {
+      aesCipher.init(Cipher.DECRYPT_MODE, aesSecret, iv);
+      plainText = aesCipher.doFinal(ciphertext, GCM_IV_LENGTH, ciphertext.length - GCM_IV_LENGTH);
+    } catch (IllegalBlockSizeException | BadPaddingException e) {
+      throw new RuntimeException(e);
+    }
 
     return new String(plainText, StandardCharsets.UTF_8);
   }

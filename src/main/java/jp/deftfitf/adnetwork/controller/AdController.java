@@ -87,12 +87,12 @@ public class AdController {
           .getInventory(BigInteger.valueOf(inventoryId))
           .send();
 
-      targetOwner = inventory.component2().substring(2);
+      targetOwner = inventory.component2().toLowerCase();
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
 
-    if (!targetOwner.equals(owner)) {
+    if (!targetOwner.equals(owner.toLowerCase())) {
       throw new IllegalArgumentException("Requested inventory isn't owned by requested address");
     }
   }

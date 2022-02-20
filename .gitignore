@@ -38,8 +38,8 @@ out/
 
 ###
 
+env/local.env
 adnetwork-contracts/client/node_modules/
 adnetwork-contracts/node_modules/
 uploaded/ad-formats/
 uploaded/images/
-
