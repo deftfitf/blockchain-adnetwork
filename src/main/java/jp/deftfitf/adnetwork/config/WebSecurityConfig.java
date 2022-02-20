@@ -68,7 +68,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
   protected void configure(HttpSecurity http) throws Exception {
     http
         .cors().configurationSource(corsConfiguration()).and()
-        .csrf().csrfTokenRepository(csrfTokenRepository()).and()
+        .csrf().ignoringAntMatchers("/delivery").csrfTokenRepository(csrfTokenRepository()).and()
         .authorizeRequests()
         .antMatchers("/api/login/challenge").permitAll()
         .antMatchers("/api/**").hasAuthority("ETH_USER")
@@ -99,6 +99,13 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     final var corsSource = new UrlBasedCorsConfigurationSource();
     corsSource.registerCorsConfiguration("/api/**", conf);
     corsSource.registerCorsConfiguration("/public/ad-formats/**", conf);
+
+    final var forDeliveryConf = new CorsConfiguration();
+    forDeliveryConf.addAllowedOrigin("*");
+    forDeliveryConf.addAllowedHeader("*");
+    forDeliveryConf.addExposedHeader("*");
+    forDeliveryConf.addAllowedMethod("POST");
+    corsSource.registerCorsConfiguration("/delivery", forDeliveryConf);
 
     return corsSource;
   }

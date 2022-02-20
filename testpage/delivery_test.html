@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Delivery Test Page</title>
+</head>
+<body>
+<div id="root">
+  <script type="application/javascript">
+    (function (parameter) {
+      const requestBody = {
+        inventoryId: parameter.inventoryId
+      };
+
+      const response = new Promise((resolve, reject) => {
+        try {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', 'http://localhost:8080/delivery', true);
+          xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+          xhr.onreadystatechange = function () { // 状態が変化すると関数が呼び出されます。
+            if (this.readyState === XMLHttpRequest.DONE && this.status === 200) {
+              resolve(JSON.parse(this.responseText));
+            }
+          }
+          xhr.send(JSON.stringify(requestBody));
+        } catch (e) {
+          reject(e);
+        }
+      });
+
+      response.then(adResponse => {
+        if (!adResponse.found) {
+          return;
+        }
+
+        const imgTag = document.createElement('img');
+        imgTag.src = adResponse.adFormatV1Dto.displayImageUrl;
+        const linkTag = document.createElement('a');
+        linkTag.href = adResponse.adFormatV1Dto.landingPageUrl;
+        linkTag.append(imgTag);
+
+        const target = document.querySelector(parameter.targetQuery);
+        target.append(linkTag);
+      });
+    })({
+      inventoryId: 1,
+      targetQuery: "#ad-container"
+    });
+  </script>
+  <h1>Delivery Test Page</h1>
+  <div id="ad-container"></div>
+</div>
+</body>
+</html>

@@ -54,9 +54,29 @@ command.
 
 ## Ad Delivery
 
+* override clock using delivery
+
 ```shell
-curl -X GET -H 'Content-Type: application/json' -d '{"inventoryId":1}' http://localhost:8080/delivery
+curl -v -X POST "http://localhost:8080/admin/clock?millis=1646112949000"
+```
+
+* reload inventory cache forcibly
+
+```shell
+curl -v -X POST "http://localhost:8080/admin/reload"
+```
+
+* delivery request from command line
+
+```shell
+curl -X POST -H 'Content-Type: application/json' -d '{"inventoryId":1}' http://localhost:8080/delivery
 {"adId":1,"adFormatV1Dto":{"inventoryId":1,"ownerAddress":"0x9F3868ce2fc5e535da82fa1cC3A779EACf75285E","startTime":1646036100,"endTime":1646727300,"adPrice":1500,"adTitle":"Test Ad","adDescription":"This is test ads","landingPageUrl":"http://localhost:3000/ads/create","displayImageUrl":"http://localhost:8080/public/images/0x9F3868ce2fc5e535da82fa1cC3A779EACf75285E-99ef04a6-b7a0-4b82-98ef-0ba249c55ce4.jpeg","nonce":"Ysr0rDNlZBpO/poiWz4WyQ=="},"found":true}
+```
+
+* delivery test on your browser
+
+```shell
+open testpage/delivery_test.html
 ```
 
 # Appendix.
